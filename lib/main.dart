@@ -129,6 +129,14 @@ class DashboardPremium extends StatelessWidget{
           ),
         ),
       ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () {
+          Navigator.push(context, MaterialPageRoute(builder: (context) => const AddTransactionPage()),
+          );
+        },
+        backgroundColor: const Color(0xFF2C5364),
+        child: const Icon(Icons.add, color: Colors.white),
+      ),
     );
   }
 
@@ -154,6 +162,87 @@ class DashboardPremium extends StatelessWidget{
       title: Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
       subtitle: Text(date),
       trailing: Text(amount, style: TextStyle(fontWeight: FontWeight.bold, color: amount.contains('+') ? Colors.green : Colors.black)),
+    );
+  }
+}
+
+class AddTransactionPage extends StatelessWidget {
+  const AddTransactionPage({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text("Tambah Transaksi", style: TextStyle(color: Colors.white)),
+        backgroundColor: const Color(0xFF0F2027),
+        iconTheme: const IconThemeData(color: Colors.white),
+      ),
+      body: Container(
+        padding: const EdgeInsets.all(25),
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [Color(0xFF0F2027), Color(0xFF203A43)],
+          ),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text("Nominal Pengeluaran", style: TextStyle(color: Colors.white70)),
+            const TextField(
+              autofocus: true,
+              keyboardType: TextInputType.number,
+              style: TextStyle(color: Colors.white, fontSize: 40, fontWeight: FontWeight.bold),
+              decoration: InputDecoration(
+                hintText: "Rp 0",
+                hintStyle: TextStyle(color: Colors.white24),
+                border: InputBorder.none,
+              ),
+            ),
+            const SizedBox(height: 30),
+            const Text("Kategori", style: TextStyle(color: Colors.white70)),
+            const SizedBox(height: 15),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceAround,
+              children: [
+                _categoryIcon(Icons.fastfood, "makan"),
+                _categoryIcon(Icons.directions_car, "Transport"),
+                _categoryIcon(Icons.shopping_bag, "Belanja"),
+              ],
+            ),
+            const Spacer(),
+            SizedBox(
+              width: double.infinity,
+              height: 55,
+              child: ElevatedButton(
+                onPressed: () => Navigator.pop(context),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF2C5364),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+                ),
+                child: const Text("SIMPAN TRANSAKSI", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+              ),
+            )
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _categoryIcon (IconData icon, String label) {
+    return Column(
+      children: [
+        Container(
+          padding: const EdgeInsets.all(15),
+          decoration: BoxDecoration(color: Colors.white.withOpacity(0.1), borderRadius: BorderRadius.circular(15)
+          ),
+        
+        child: Icon(icon, color: Colors.white),
+        ),
+        const SizedBox(height: 5),
+        Text(label, style: const TextStyle(color: Colors.white60, fontSize: 12)),
+      ],
     );
   }
 }
