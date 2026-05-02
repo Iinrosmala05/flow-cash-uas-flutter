@@ -166,8 +166,15 @@ class DashboardPremium extends StatelessWidget{
   }
 }
 
-class AddTransactionPage extends StatelessWidget {
+class AddTransactionPage extends StatefulWidget {
   const AddTransactionPage({super.key});
+
+  @override
+  State<AddTransactionPage> createState() => _AddTransactionPageState();
+}
+
+class _AddTransactionPageState extends State<AddTransactionPage> {
+  String selectedCategory = "";
 
   @override
   Widget build(BuildContext context) {
@@ -216,34 +223,60 @@ class AddTransactionPage extends StatelessWidget {
               width: double.infinity,
               height: 55,
               child: ElevatedButton(
-                onPressed: () => Navigator.pop(context),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFF2C5364),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+                  padding: const EdgeInsets.symmetric(vertical: 15),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadiusGeometry.circular(15)),
                 ),
-                child: const Text("SIMPAN TRANSAKSI", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-              ),
-            )
-          ],
-        ),
-      ),
-    );
-  }
+                onPressed:() { Navigator.pop(context);
 
-  Widget _categoryIcon (IconData icon, String label) {
-    return Column(
-      children: [
-        Container(
-          padding: const EdgeInsets.all(15),
-          decoration: BoxDecoration(color: Colors.white.withOpacity(0.1), borderRadius: BorderRadius.circular(15)
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text("Mantap! Transaksi $selectedCategory berhasil dicatat"),
+                    backgroundColor: Colors.green,
+                  ),
+                );
+              }, 
+              child: const Text("SIMPAN TRANSAKSI", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+            ),
           ),
-        
-        child: Icon(icon, color: Colors.white),
-        ),
-        const SizedBox(height: 5),
-        Text(label, style: const TextStyle(color: Colors.white60, fontSize: 12)),
-      ],
+        ],
+      ),
+    ),
+  );
+}
+Widget _categoryIcon (IconData icon, String label) {
+    bool isSelected = selectedCategory == label;
+
+    return GestureDetector(
+      onTap: () {
+        setState((){
+          selectedCategory = label;
+        });
+      },
+      child: Column(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(15),
+            decoration: BoxDecoration(
+            color: isSelected ? Colors.blueAccent : Colors.white.withOpacity(0.1),
+            borderRadius: BorderRadius.circular(15),
+            border: isSelected ? Border.all(color: Colors.white, width: 2) : null,
+            ),
+          child: Icon(icon, color: Colors.white),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            label,
+            style: TextStyle(
+              color: isSelected ? Colors.white : Colors.white60,
+              fontWeight: isSelected ? FontWeight.bold : FontWeight.normal
+            )
+          ),
+        ],
+      ),
     );
   }
 }
 
+ 
