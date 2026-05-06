@@ -40,6 +40,20 @@ class _DashboardPremiumState extends State<DashboardPremium> {
     },
   ];
 
+  String formatWaktu(dynamic waktu) {
+    if (waktu == null || waktu is String) return "Baru Saja";
+
+    DateTime waktuData = waktu as DateTime;
+    DateTime sekarang = DateTime.now();
+    Duration selisih = sekarang.difference(waktuData);
+
+    if (selisih.inMinutes < 1) return "Baru Saja";
+    if (selisih.inHours < 24 && waktuData.day == sekarang.day) return "Hari Ini";
+    if (selisih.inHours < 48 && waktuData.day == sekarang.day -1) return "Kemaren";
+
+    return "${waktuData.day}/${waktuData.month}/${waktuData.year}";
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -177,12 +191,12 @@ class _DashboardPremiumState extends State<DashboardPremium> {
                                 fontWeight: FontWeight.bold,
                               ),
                             ),
-                            subtitle: const Text(
-                              "Hari Ini",
-                              style: TextStyle(color: Colors.white54),
+                            subtitle: Text(
+                              formatWaktu(transactions[index]['time']),
+                              style: const TextStyle(color: Colors.white54, fontSize: 12),
                             ),
                             trailing: Text(
-                              transactions[index]['amount'],
+                              transactions[index]['amount'].toString().replaceAllMapped(RegExp(r'(\d{1,3})(?=(d{3})+(?!d))'), (Match m) => '${m[1]}.'),
                               style: const TextStyle(
                                 color: Colors.redAccent,
                                 fontWeight: FontWeight.bold,
@@ -332,6 +346,7 @@ class _AddTransactionPageState extends State<AddTransactionPage> {
                           : (selectedCategory == "Transport"
                                 ? Colors.blue
                                 : Colors.pink),
+                      "time": DateTime.now(),
                     });
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
