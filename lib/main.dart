@@ -98,9 +98,9 @@ class _DashboardPremiumState extends State<DashboardPremium> {
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
-                    children:[
+                    children: [
                       Text(
-                        "Rp ${totalSaldo.toString().replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),(Match m) => '${m[1]}.')}",
+                        "Rp ${totalSaldo.toString().replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => '${m[1]}.')}",
                         style: TextStyle(
                           color: Colors.white,
                           fontSize: 32,
@@ -132,38 +132,62 @@ class _DashboardPremiumState extends State<DashboardPremium> {
                     physics: const NeverScrollableScrollPhysics(),
                     itemCount: transactions.length,
                     itemBuilder: (context, index) {
-                      return Card(
-                        color: Colors.white.withOpacity(0.05),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(15),
+                      return Dismissible(
+                        key: UniqueKey(),
+                        direction: DismissDirection.endToStart,
+                        background: Container(
+                          alignment: Alignment.centerRight,
+                          padding: const EdgeInsets.only(right: 20),
+                          color: Colors.red,
+                          child: const Icon(Icons.delete, color: Colors.white),
                         ),
-                        margin: const EdgeInsets.symmetric(vertical: 8),
-                        child: ListTile(
-                          leading: CircleAvatar(
-                            backgroundColor: transactions[index]['color']
-                                .withOpacity(0.2),
-                            child: Icon(
-                              transactions[index]['icon'],
-                              color: transactions[index]['color'],
+                        onDismissed: (direction) {
+                          setState(() {
+                            String nominalString = transactions[index]['amount']
+                                .toString();
+                            String hanyaAngka = nominalString.replaceAll(
+                              RegExp(r'[^0-9]'),'',
+                            );
+                            int angkaTransaksi = int.tryParse(hanyaAngka) ?? 0;
+
+                            totalSaldo = totalSaldo + angkaTransaksi;
+                            transactions.removeAt(index);
+                          });
+                        },
+                        child: Card(
+                          color: Colors.white.withOpacity(0.05),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(15),
+                          ),
+                          margin: const EdgeInsets.symmetric(vertical: 8),
+                          child: ListTile(
+                            leading: CircleAvatar(
+                              backgroundColor:
+                                  (transactions[index]['color'] as Color)
+                                      .withOpacity(0.2),
+                              child: Icon(
+                                transactions[index]['icon'] as IconData,
+                                color: transactions[index]['color'] as Color,
+                              ),
                             ),
-                          ),
-                          title: Text(
-                            transactions[index]['title'],
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontWeight: FontWeight.bold,
+                            title: Text(
+                              transactions[index]['title'],
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                              ),
                             ),
-                          ),
-                          subtitle: const Text(
-                            "Hari Ini",
-                            style: TextStyle(color: Colors.white54),
-                          ),
-                          trailing: Text(
-                            transactions[index]['amount'],
-                            style: const TextStyle(
-                              color: Colors.redAccent,
-                              fontWeight: FontWeight.bold,
-                              fontSize: 16,
+                            subtitle: const Text(
+                              "Hari Ini",
+                              style: TextStyle(color: Colors.white54),
+                            ),
+                            trailing: Text(
+                              transactions[index]['amount'],
+                              style: const TextStyle(
+                                color: Colors.redAccent,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 16,
+                              ),
                             ),
                           ),
                         ),
@@ -188,18 +212,19 @@ class _DashboardPremiumState extends State<DashboardPremium> {
               transactions.insert(0, result);
 
               String nominalString = result['amount'].toString();
-              String hanyaAngka= nominalString.replaceAll(RegExp(r'[^[0-9]'),'');
+              String hanyaAngka = nominalString.replaceAll(
+                RegExp(r'[^0-9]'),'',
+              );
               int angkaTransaksi = int.tryParse(hanyaAngka) ?? 0;
               totalSaldo = totalSaldo - angkaTransaksi;
             });
           }
-        },                                                                         
+        },
         backgroundColor: const Color(0xFF2C5364),
         child: const Icon(Icons.add, color: Colors.white),
       ),
     );
   }
-
 }
 
 class AddTransactionPage extends StatefulWidget {
@@ -297,15 +322,25 @@ class _AddTransactionPageState extends State<AddTransactionPage> {
                     Navigator.pop(context, {
                       "title": selectedCategory,
                       "amount": "Rp ${_amountController.text}",
-                      "icon": selectedCategory == "makan" ? Icons.fastfood: (selectedCategory == "Transport" ?Icons.directions_car: Icons.shopping_bag),
-                      "color": selectedCategory== "makan" ? Colors.orange: (selectedCategory == "Transport" ? Colors.blue: Colors.pink),
+                      "icon": selectedCategory == "makan"
+                          ? Icons.fastfood
+                          : (selectedCategory == "Transport"
+                                ? Icons.directions_car
+                                : Icons.shopping_bag),
+                      "color": selectedCategory == "makan"
+                          ? Colors.orange
+                          : (selectedCategory == "Transport"
+                                ? Colors.blue
+                                : Colors.pink),
                     });
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
-                        content: Text("Mantap! Transaksi $selectedCategory berhasil dicatat"),
+                        content: Text(
+                          "Mantap! Transaksi $selectedCategory berhasil dicatat",
+                        ),
                         backgroundColor: Colors.green,
                       ),
-                    ); 
+                    );
                   }
                 },
                 child: const Text(
