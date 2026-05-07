@@ -229,8 +229,13 @@ class _DashboardPremiumState extends State<DashboardPremium> {
               String hanyaAngka = nominalString.replaceAll(
                 RegExp(r'[^0-9]'),'',
               );
-              int angkaTransaksi = int.tryParse(hanyaAngka) ?? 0;
-              totalSaldo = totalSaldo - angkaTransaksi;
+              int angka = int.tryParse(hanyaAngka) ?? 0;
+
+              if (result['type'] == "Masuk") {
+                totalSaldo += angka;
+              } else {
+                totalSaldo -= angka;
+              }
             });
           }
         },
@@ -251,6 +256,36 @@ class AddTransactionPage extends StatefulWidget {
 class _AddTransactionPageState extends State<AddTransactionPage> {
   String selectedCategory = "";
   final TextEditingController _amountController = TextEditingController();
+  final TextEditingController _otherController = TextEditingController();
+  bool isOtherSelected = false;
+
+  String type = "Keluar";
+
+  Widget _typeButton(String label, Color color) {
+    bool isSelected = type == label;
+    return Expanded(
+      child: GestureDetector(
+        onTap: () => setState(() {
+          type = label;
+          isOtherSelected = false;
+          selectedCategory = "";
+          _otherController.clear();
+        }),
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 12),
+          decoration: BoxDecoration(
+            color: isSelected ? color: Colors.white10,
+            borderRadius: BorderRadius.circular(12),
+            border: isSelected ? Border.all(color: Colors.white, width: 2) : null,
+          ),
+            child: Center(
+              child: Text(label, style: const TextStyle(color: Colors.white)),
+            ), 
+        ),
+      ),
+    );
+  }
+
 
   @override
   Widget build(BuildContext context) {
@@ -275,11 +310,16 @@ class _AddTransactionPageState extends State<AddTransactionPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              "Nominal Pengeluaran",
-              style: TextStyle(color: Colors.white70),
+            Row(
+              children: [
+                _typeButton("Masuk", Colors.green), const SizedBox(width: 10),
+                _typeButton("Keluar", Colors.redAccent),
+              ],
             ),
-            const SizedBox(height: 10),
+            const SizedBox(height: 20),
+            const Text(
+              "Nominal", style: TextStyle(color: Colors.white54),
+            ),
             TextField(
               controller: _amountController,
               keyboardType: TextInputType.number,
@@ -301,13 +341,42 @@ class _AddTransactionPageState extends State<AddTransactionPage> {
             const SizedBox(height: 30),
             const Text("Kategori", style: TextStyle(color: Colors.white70)),
             const SizedBox(height: 15),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
+            Wrap(
+              spacing: 20,
+              runSpacing: 20,
+              alignment: WrapAlignment.center,
               children: [
-                _categoryIcon(Icons.fastfood, "makan"),
-                _categoryIcon(Icons.directions_car, "Transport"),
-                _categoryIcon(Icons.shopping_bag, "Belanja"),
+                if (type == "Keluar")...[
+                  _categoryIcon(Icons.fastfood, "Makan"),
+                  _categoryIcon(Icons.directions_car, "Transport"),
+                  _categoryIcon(Icons.shopping_bag, "Belanja"),
+                ] else ...[
+                  _categoryIcon(Icons.payments, "Gaji"),
+                  _categoryIcon(Icons.account_balance_wallet, "Saku"),
+                  _categoryIcon(Icons.savings, "Tabungan"),
+                ],
+                _categoryIcon(Icons.add_circle_outline, "Lainnya"),
               ],
+            ),
+            if (isOtherSelected)
+            Container(
+              margin: const EdgeInsets.only(top: 20),
+              padding: const EdgeInsets.symmetric(horizontal: 10),
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.05),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: TextField(
+                controller: _otherController,
+                autofocus: true,
+                style: const TextStyle(color: Colors.white),
+                decoration: const InputDecoration(
+                  hintText: "Ketik Keperluan disini...",
+                  hintStyle: TextStyle(color: Colors.white24),
+                  border: InputBorder.none,
+                  contentPadding: EdgeInsets.all(15),
+                ),
+              ),
             ),
             const Spacer(),
             SizedBox(
@@ -333,25 +402,26 @@ class _AddTransactionPageState extends State<AddTransactionPage> {
                       ),
                     );
                   } else {
+                    String finalTitle = (isOtherSelected && _otherController.text.isNotEmpty) ? _otherController.text: selectedCategory;
                     Navigator.pop(context, {
-                      "title": selectedCategory,
-                      "amount": "Rp ${_amountController.text}",
-                      "icon": selectedCategory == "makan"
-                          ? Icons.fastfood
-                          : (selectedCategory == "Transport"
-                                ? Icons.directions_car
-                                : Icons.shopping_bag),
-                      "color": selectedCategory == "makan"
-                          ? Colors.orange
-                          : (selectedCategory == "Transport"
-                                ? Colors.blue
-                                : Colors.pink),
+                      "title": finalTitle,
+                      "amount": (type == "Masuk" ? "+ " : "- ") + "Rp ${_amountController.text}",
+                      "type": type,
+                      "icon": isOtherSelected ?
+                              Icons.edit_note: (selectedCategory == "Makan" ?
+                              Icons.fastfood: selectedCategory == "Transport" ?
+                              Icons.directions_car: selectedCategory == "Belanja" ?
+                              Icons.shopping_bag: selectedCategory == "Saku" ?
+                              Icons.account_balance_wallet: selectedCategory == "Gaji" ?
+                              Icons.payments: selectedCategory == "Tabungan" ? 
+                              Icons.savings: Icons.category),
+                      "color": type == "Masuk" ? Colors.green: Colors.redAccent,
                       "time": DateTime.now(),
                     });
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
                         content: Text(
-                          "Mantap! Transaksi $selectedCategory berhasil dicatat",
+                          "Mantap! Transaksi $finalTitle berhasil dicatat",
                         ),
                         backgroundColor: Colors.green,
                       ),
@@ -380,6 +450,11 @@ class _AddTransactionPageState extends State<AddTransactionPage> {
       onTap: () {
         setState(() {
           selectedCategory = label;
+          if (label == "Lainnya") {
+            isOtherSelected = true;
+          } else {
+            isOtherSelected = false;
+          }
         });
       },
       child: Column(
