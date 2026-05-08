@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -11,35 +12,154 @@ class FlowCashApp extends StatelessWidget {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       theme: ThemeData(fontFamily: 'Poppins'),
-      home: const DashboardPremium(),
+      home: const SplashScreen(),
     );
   }
 }
 
+class SplashScreen extends StatefulWidget {
+  const SplashScreen({super.key});
+
+  @override
+  State<SplashScreen> createState() => _SplashScreenState();
+}
+
+class _SplashScreenState extends
+State<SplashScreen> {
+  @override
+  void initState(){
+  super.initState();
+    Future.delayed(const Duration(seconds: 6), () {
+      Navigator.pushReplacement(
+        context, MaterialPageRoute(builder: (context) => const InitialSetupPage()),
+      );
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: const Color(0xFF0F2027),
+      body: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: const [
+            Icon(Icons.account_balance_wallet, size: 100, color: Colors.blueAccent),
+            SizedBox(height: 20),
+            Text("FLOWCASH", style: TextStyle(color: Colors.white, fontSize: 28, fontWeight: FontWeight.bold, letterSpacing: 4)),
+            SizedBox(height: 10),
+            CircularProgressIndicator(color: Colors.blueAccent),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class InitialSetupPage extends StatefulWidget{
+  const InitialSetupPage({super.key});
+
+  @override
+  State<InitialSetupPage> createState() => _InitialSetupPageState();
+}
+
+class _InitialSetupPageState extends State<InitialSetupPage> {
+  final TextEditingController _nameController = TextEditingController();
+  final TextEditingController _balanceController = TextEditingController();
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: Container(
+        padding: const EdgeInsets.all(30),
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: AlignmentGeometry.bottomCenter,
+            colors: [Color(0xFF0F2027), Color(0xFF203A43)],
+          ),
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Text("Halo! Kenalan Yuk", style: TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold),),
+            const SizedBox(height: 30),
+            TextField(
+              controller: _nameController,
+              style: const TextStyle(color: Colors.white),
+              decoration: InputDecoration(
+                hintText: "Nama Kamu",
+                hintStyle: const TextStyle(color: Colors.white38),
+                filled: true,
+                fillColor: Colors.white10,
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(15)),
+              ),
+            ),
+            const SizedBox(height: 20) ,
+            TextField(
+              controller: _balanceController,
+              keyboardType: TextInputType.number,
+              style: const TextStyle(color: Colors.white),
+              decoration: InputDecoration(
+                hintText: "Saldo Awal (Rp )",
+                hintStyle: const TextStyle(color: Colors.white38),
+                filled: true,
+                fillColor: Colors.white10,
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(15)),
+              ),
+            ),
+            const SizedBox(height: 40),
+            SizedBox(
+              width: double.infinity,
+              height: 55,
+              child: ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.blueAccent,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+                ),
+                onPressed: () {
+                  if (_nameController.text.isNotEmpty && _balanceController.text.isNotEmpty) {
+                    Navigator.pushReplacement(
+                      context, MaterialPageRoute(
+                        builder: (context) =>
+                        DashboardPremium(
+                          userNama: _nameController.text,
+                          saldoAwal: int.parse(_balanceController.text),
+                        ),
+                      ),
+                    );
+                  }
+                },
+                child: const Text("MULAI APLIKASI", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+} 
+
 class DashboardPremium extends StatefulWidget {
-  const DashboardPremium({super.key});
+  final String userNama;
+  final int saldoAwal;
+  
+  const DashboardPremium({super.key, required this.userNama, required this.saldoAwal});
 
   @override
   State<DashboardPremium> createState() => _DashboardPremiumState();
 }
 
 class _DashboardPremiumState extends State<DashboardPremium> {
-  int totalSaldo = 10500000;
-  List<Map<String, dynamic>> transactions = [
-    {
-      "title": "Makan Siang",
-      "amount": "Rp 25.000",
-      "icon": Icons.fastfood,
-      "color": Colors.orange,
-    },
-    {
-      "title": "Beli Bensin",
-      "amount": "Rp 50.000",
-      "icon": Icons.directions_car,
-      "color": Colors.blue,
-    },
-  ];
+  late int totalSaldo;
+  List<Map<String, dynamic>> transactions = [];
 
+  @override
+  void initState(){
+    super.initState();
+    totalSaldo = widget.saldoAwal;
+  }
+  
   String formatWaktu(dynamic waktu) {
     if (waktu == null || waktu is String) return "Baru Saja";
 
@@ -82,8 +202,7 @@ class _DashboardPremiumState extends State<DashboardPremium> {
                             "Selamat Datang",
                             style: TextStyle(color: Colors.white, fontSize: 16),
                           ),
-                          Text(
-                            "Iin Rosmala",
+                          Text(widget.userNama,
                             style: TextStyle(
                               color: Colors.white,
                               fontSize: 24,
