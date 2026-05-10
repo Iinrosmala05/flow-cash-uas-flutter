@@ -1,6 +1,8 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:pie_chart/pie_chart.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 void main() => runApp(const FlowCashApp());
 
@@ -29,10 +31,23 @@ State<SplashScreen> {
   @override
   void initState(){
   super.initState();
-    Future.delayed(const Duration(seconds: 6), () {
-      Navigator.pushReplacement(
-        context, MaterialPageRoute(builder: (context) => const InitialSetupPage()),
-      );
+    Future.delayed(const Duration(seconds: 6), () async {
+      final prefs = await
+      SharedPreferences.getInstance();
+      final String? nama = prefs.getString('userNama');
+      final int? saldo = prefs.getInt('totalSaldo');
+
+      if (nama != null && saldo != null) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => DashboardPremium(userNama: nama, saldoAwal: saldo)),
+        );
+      } else {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => const InitialSetupPage()),
+        );
+      }
     });
   }
 
@@ -117,12 +132,17 @@ class _InitialSetupPageState extends State<InitialSetupPage> {
                   backgroundColor: Colors.blueAccent,
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
                 ),
-                onPressed: () {
+                onPressed: () async {
                   if (_nameController.text.isNotEmpty && _balanceController.text.isNotEmpty) {
+                    final prefs = await
+                    SharedPreferences.getInstance();
+                      await prefs.setString('userNama', _nameController.text);
+                      await prefs.setInt('totalSaldo', int.parse(_balanceController.text));
+
                     Navigator.pushReplacement(
-                      context, MaterialPageRoute(
-                        builder: (context) =>
-                        DashboardPremium(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => DashboardPremium(
                           userNama: _nameController.text,
                           saldoAwal: int.parse(_balanceController.text),
                         ),
@@ -153,6 +173,26 @@ class DashboardPremium extends StatefulWidget {
 class _DashboardPremiumState extends State<DashboardPremium> {
   late int totalSaldo;
   List<Map<String, dynamic>> transactions = [];
+
+  Map<String,double> hitungDataGrafik() {
+    Map<String, double> dataMap = {};
+
+    for (var item in transactions) {
+      String kategori = item ['title'].toString().trim();
+      String nominalString = item['amount'].toString().replaceAll(RegExp(r'[^0-9]'),'');
+      double nominal = double.tryParse(nominalString) ?? 0;
+
+      if (nominal > 0) {
+        if (dataMap.containsKey(kategori)) {
+          dataMap[kategori] = dataMap[kategori]! + nominal;
+        } else {
+          dataMap[kategori] = nominal;
+        }
+      }
+    }
+    if (dataMap.isEmpty) return {"Belum  Ada Data": 0};
+    return dataMap;   
+  }
 
   @override
   void initState(){
@@ -245,6 +285,31 @@ class _DashboardPremiumState extends State<DashboardPremium> {
                 ),
                 const SizedBox(height: 30),
 
+                PieChart(
+                  dataMap: hitungDataGrafik(),
+                  animationDuration: const Duration(milliseconds: 800),
+                  chartRadius: MediaQuery.of(context).size.width / 3.2,
+                  colorList: const [
+                    Colors.orange,
+                    Colors.blue,
+                    Colors.purple,
+                    Colors.green,
+                    Colors.redAccent,
+                    Colors.teal,
+                  ],
+                  chartType:  ChartType.ring,
+                  legendOptions: const LegendOptions(
+                    showLegends: true,
+                    legendPosition: LegendPosition.right,
+                    legendTextStyle: TextStyle(color: Colors.white),
+                  ),
+                  chartValuesOptions: const ChartValuesOptions(
+                    showChartValuesInPercentage: true,
+                    showChartValues: true,
+                  ),
+                ),
+                const SizedBox(height: 40),
+
                 const Padding(
                   padding: EdgeInsets.symmetric(horizontal: 25),
                   child: Text(
@@ -278,12 +343,13 @@ class _DashboardPremiumState extends State<DashboardPremium> {
                           setState(() {
                             String nominalString = transactions[index]['amount']
                                 .toString();
-                            String hanyaAngka = nominalString.replaceAll(
-                              RegExp(r'[^0-9]'),'',
+                            int angkaTransaksi =int.parse(nominalString.replaceAll(RegExp(r'[^0-9]'),'')
                             );
-                            int angkaTransaksi = int.tryParse(hanyaAngka) ?? 0;
-
-                            totalSaldo = totalSaldo + angkaTransaksi;
+                            if (transactions[index]['type'] == "Keluar") {
+                              totalSaldo += angkaTransaksi;
+                            } else {
+                              totalSaldo -= angkaTransaksi;
+                            }
                             transactions.removeAt(index);
                           });
                         },
