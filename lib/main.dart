@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:pie_chart/pie_chart.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'db_helper.dart';
 
 void main() => runApp(const FlowCashApp());
 
@@ -31,6 +32,7 @@ State<SplashScreen> {
   @override
   void initState(){
   super.initState();
+  
     Future.delayed(const Duration(seconds: 6), () async {
       final prefs = await
       SharedPreferences.getInstance();
@@ -178,9 +180,8 @@ class _DashboardPremiumState extends State<DashboardPremium> {
     Map<String, double> dataMap = {};
 
     for (var item in transactions) {
-      String kategori = item ['title'].toString().trim();
-      String nominalString = item['amount'].toString().replaceAll(RegExp(r'[^0-9]'),'');
-      double nominal = double.tryParse(nominalString) ?? 0;
+      String kategori = item ['category'].toString().trim();
+      double nominal = (item['amount'] as int).toDouble();
 
       if (nominal > 0) {
         if (dataMap.containsKey(kategori)) {
@@ -198,12 +199,29 @@ class _DashboardPremiumState extends State<DashboardPremium> {
   void initState(){
     super.initState();
     totalSaldo = widget.saldoAwal;
+    _refreshTransactions();
+  }
+  void _refreshTransactions() async {
+    final data = await
+    DatabaseHelper.instance.queryAllTransactions();
+    setState(() {
+      transactions = data;
+      int saldoSekarang = widget.saldoAwal;
+      for (var item in transactions) {
+        if (item['type'] == 'Masuk') {
+          saldoSekarang += item['amount'] as int;
+        } else {
+          saldoSekarang -= item['amount'] as int;
+        }
+      }
+      totalSaldo = saldoSekarang;
+    });
   }
   
   String formatWaktu(dynamic waktu) {
     if (waktu == null || waktu is String) return "Baru Saja";
-
-    DateTime waktuData = waktu as DateTime;
+    try {
+    DateTime waktuData = DateTime.parse(waktu.toString());
     DateTime sekarang = DateTime.now();
     Duration selisih = sekarang.difference(waktuData);
 
@@ -212,6 +230,9 @@ class _DashboardPremiumState extends State<DashboardPremium> {
     if (selisih.inHours < 48 && waktuData.day == sekarang.day -1) return "Kemaren";
 
     return "${waktuData.day}/${waktuData.month}/${waktuData.year}";
+    } catch (e) {
+      return "Baru Saja";
+    }
   }
 
   @override
@@ -330,6 +351,26 @@ class _DashboardPremiumState extends State<DashboardPremium> {
                     physics: const NeverScrollableScrollPhysics(),
                     itemCount: transactions.length,
                     itemBuilder: (context, index) {
+                      IconData itemIcon = Icons.edit_note;
+                      Color itemColor = transactions[index]['type'] == 'Masuk' ? Colors.green : Colors.redAccent;
+                      
+                      if (transactions[index]['category'] == 'Makan') {
+                        itemIcon = Icons.fastfood;
+                      } else if (transactions[index]['category'] == 'Transport') {
+                        itemIcon = Icons.directions_car;
+                      } else if (transactions[index]['category'] == 'Belanja') {
+                        itemIcon = Icons.shopping_bag;
+                      } else if (transactions[index]['category'] == 'Gaji') {
+                        itemIcon = Icons.payments;
+                      } else if (transactions[index]['category'] == 'Saku') {
+                        itemIcon = Icons.account_balance_wallet;
+                      } else if (transactions[index]['category'] == 'Tabungan') {
+                        itemIcon = Icons.savings;
+                      } else if (transactions[index]['category'] == 'Lainnya') {
+                        itemIcon = Icons.receipt_long;
+                      } else {
+                      itemIcon = Icons.category;
+                      }
                       return Dismissible(
                         key: UniqueKey(),
                         direction: DismissDirection.endToStart,
@@ -339,19 +380,10 @@ class _DashboardPremiumState extends State<DashboardPremium> {
                           color: Colors.red,
                           child: const Icon(Icons.delete, color: Colors.white),
                         ),
-                        onDismissed: (direction) {
-                          setState(() {
-                            String nominalString = transactions[index]['amount']
-                                .toString();
-                            int angkaTransaksi =int.parse(nominalString.replaceAll(RegExp(r'[^0-9]'),'')
-                            );
-                            if (transactions[index]['type'] == "Keluar") {
-                              totalSaldo += angkaTransaksi;
-                            } else {
-                              totalSaldo -= angkaTransaksi;
-                            }
-                            transactions.removeAt(index);
-                          });
+                        onDismissed: (direction) async {
+                          int id = transactions[index]['id']; 
+                          await DatabaseHelper.instance.deleteTransaction(id);
+                          _refreshTransactions();
                         },
                         child: Card(
                           color: Colors.white.withOpacity(0.05),
@@ -361,29 +393,27 @@ class _DashboardPremiumState extends State<DashboardPremium> {
                           margin: const EdgeInsets.symmetric(vertical: 8),
                           child: ListTile(
                             leading: CircleAvatar(
-                              backgroundColor:
-                                  (transactions[index]['color'] as Color)
-                                      .withOpacity(0.2),
+                              backgroundColor: itemColor.withOpacity(0.2),
                               child: Icon(
-                                transactions[index]['icon'] as IconData,
-                                color: transactions[index]['color'] as Color,
+                                itemIcon,
+                                color: itemColor,
                               ),
                             ),
                             title: Text(
-                              transactions[index]['title'],
+                              transactions[index]['name'] ?? 'Tanpa Nama',
                               style: const TextStyle(
                                 color: Colors.white,
                                 fontWeight: FontWeight.bold,
                               ),
                             ),
                             subtitle: Text(
-                              formatWaktu(transactions[index]['time']),
+                              formatWaktu(transactions[index]['date']),
                               style: const TextStyle(color: Colors.white54, fontSize: 12),
                             ),
                             trailing: Text(
-                              transactions[index]['amount'].toString().replaceAllMapped(RegExp(r'(\d{1,3})(?=(d{3})+(?!d))'), (Match m) => '${m[1]}.'),
-                              style: const TextStyle(
-                                color: Colors.redAccent,
+                              "Rp ${transactions[index]['amount'].toString().replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => '${m[1]}.')}",
+                              style: TextStyle(
+                                color: itemColor,
                                 fontWeight: FontWeight.bold,
                                 fontSize: 16,
                               ),
@@ -407,21 +437,15 @@ class _DashboardPremiumState extends State<DashboardPremium> {
             MaterialPageRoute(builder: (context) => const AddTransactionPage()),
           );
           if (result != null) {
-            setState(() {
-              transactions.insert(0, result);
-
-              String nominalString = result['amount'].toString();
-              String hanyaAngka = nominalString.replaceAll(
-                RegExp(r'[^0-9]'),'',
-              );
-              int angka = int.tryParse(hanyaAngka) ?? 0;
-
-              if (result['type'] == "Masuk") {
-                totalSaldo += angka;
-              } else {
-                totalSaldo -= angka;
-              }
+            await DatabaseHelper.instance.insertTransaction({
+              'name': result['title'],
+              'amount': int.parse(result['amount'].toString().replaceAll(RegExp(r'[^0-9]'), '')),
+              'type': result['type'],
+              'category': result['icon'] == Icons.edit_note ? "Lainnya": result['title'],
+              'date': DateTime.now().toString(),
             });
+            
+            _refreshTransactions(); 
           }
         },
         backgroundColor: const Color(0xFF2C5364),
