@@ -33,6 +33,15 @@ class DatabaseHelper {
         date TEXT
       )
     ''');
+
+    await db.execute('''
+    CREATE TABLE user (
+      id INTEGER PRIMARY KEY,
+      name TEXT,
+      balance REAL
+    )
+  ''');
+  await db.insert('user', {'id': 1, 'name': 'User', 'balance': 0.0});
   }
 
   Future<int> insertTransaction(Map<String, dynamic> row) async {
@@ -48,5 +57,14 @@ class DatabaseHelper {
   Future<int> deleteTransaction(int id) async {
     Database db = await instance.database;
     return await db.delete('transactions', where: 'id = ?', whereArgs: [id]);
+  }
+
+  Future<int> updateUser(String name, double balance) async {
+    final db = await instance.database; 
+    return await db.update(
+      'user', {'name': name, 'balance': balance},
+      where: 'id = ?',
+      whereArgs: [1],
+    );
   }
 }

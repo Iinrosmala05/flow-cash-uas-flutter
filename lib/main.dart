@@ -4,6 +4,8 @@ import 'package:flutter/services.dart';
 import 'package:pie_chart/pie_chart.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'db_helper.dart';
+import 'edit_profil_page.dart';
+import 'package:sqflite/sqflite.dart';
 
 void main() => runApp(const FlowCashApp());
 
@@ -27,22 +29,23 @@ class SplashScreen extends StatefulWidget {
   State<SplashScreen> createState() => _SplashScreenState();
 }
 
-class _SplashScreenState extends
-State<SplashScreen> {
+class _SplashScreenState extends State<SplashScreen> {
   @override
-  void initState(){
-  super.initState();
-  
+  void initState() {
+    super.initState();
+
     Future.delayed(const Duration(seconds: 6), () async {
-      final prefs = await
-      SharedPreferences.getInstance();
+      final prefs = await SharedPreferences.getInstance();
       final String? nama = prefs.getString('userNama');
       final int? saldo = prefs.getInt('totalSaldo');
 
       if (nama != null && saldo != null) {
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(builder: (context) => DashboardPremium(userNama: nama, saldoAwal: saldo)),
+          MaterialPageRoute(
+            builder: (context) =>
+                DashboardPremium(userNama: nama, saldoAwal: saldo),
+          ),
         );
       } else {
         Navigator.pushReplacement(
@@ -61,9 +64,21 @@ State<SplashScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: const [
-            Icon(Icons.account_balance_wallet, size: 100, color: Colors.blueAccent),
+            Icon(
+              Icons.account_balance_wallet,
+              size: 100,
+              color: Colors.blueAccent,
+            ),
             SizedBox(height: 20),
-            Text("FLOWCASH", style: TextStyle(color: Colors.white, fontSize: 28, fontWeight: FontWeight.bold, letterSpacing: 4)),
+            Text(
+              "FLOWCASH",
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 28,
+                fontWeight: FontWeight.bold,
+                letterSpacing: 4,
+              ),
+            ),
             SizedBox(height: 10),
             CircularProgressIndicator(color: Colors.blueAccent),
           ],
@@ -73,7 +88,7 @@ State<SplashScreen> {
   }
 }
 
-class InitialSetupPage extends StatefulWidget{
+class InitialSetupPage extends StatefulWidget {
   const InitialSetupPage({super.key});
 
   @override
@@ -99,7 +114,14 @@ class _InitialSetupPageState extends State<InitialSetupPage> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Text("Halo! Kenalan Yuk", style: TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold),),
+            const Text(
+              "Halo! Kenalan Yuk",
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
             const SizedBox(height: 30),
             TextField(
               controller: _nameController,
@@ -109,10 +131,12 @@ class _InitialSetupPageState extends State<InitialSetupPage> {
                 hintStyle: const TextStyle(color: Colors.white38),
                 filled: true,
                 fillColor: Colors.white10,
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(15)),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(15),
+                ),
               ),
             ),
-            const SizedBox(height: 20) ,
+            const SizedBox(height: 20),
             TextField(
               controller: _balanceController,
               keyboardType: TextInputType.number,
@@ -122,7 +146,9 @@ class _InitialSetupPageState extends State<InitialSetupPage> {
                 hintStyle: const TextStyle(color: Colors.white38),
                 filled: true,
                 fillColor: Colors.white10,
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(15)),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(15),
+                ),
               ),
             ),
             const SizedBox(height: 40),
@@ -132,27 +158,45 @@ class _InitialSetupPageState extends State<InitialSetupPage> {
               child: ElevatedButton(
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.blueAccent,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(15),
+                  ),
                 ),
                 onPressed: () async {
-                  if (_nameController.text.isNotEmpty && _balanceController.text.isNotEmpty) {
-                    final prefs = await
-                    SharedPreferences.getInstance();
-                      await prefs.setString('userNama', _nameController.text);
-                      await prefs.setInt('totalSaldo', int.parse(_balanceController.text));
+                  if (_nameController.text.isNotEmpty &&
+                      _balanceController.text.isNotEmpty) {
+                    final prefs = await SharedPreferences.getInstance();
+                    String namaInput = _nameController.text;
+                    int saldoInput = int.parse(_balanceController.text);
+
+                    await prefs.setString('userNama', namaInput);
+                    await prefs.setInt('totalSaldo', saldoInput);
+
+                    final db = await DatabaseHelper.instance.database;
+                    await db.insert('user', {
+                      'id': 1,
+                      'name': namaInput,
+                      'balance': saldoInput.toDouble(),
+                    }, conflictAlgorithm: ConflictAlgorithm.replace);
 
                     Navigator.pushReplacement(
                       context,
                       MaterialPageRoute(
                         builder: (context) => DashboardPremium(
-                          userNama: _nameController.text,
-                          saldoAwal: int.parse(_balanceController.text),
+                          userNama: namaInput,
+                          saldoAwal: saldoInput,
                         ),
                       ),
                     );
                   }
                 },
-                child: const Text("MULAI APLIKASI", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                child: const Text(
+                  "MULAI APLIKASI",
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
               ),
             ),
           ],
@@ -160,13 +204,17 @@ class _InitialSetupPageState extends State<InitialSetupPage> {
       ),
     );
   }
-} 
+}
 
 class DashboardPremium extends StatefulWidget {
   final String userNama;
   final int saldoAwal;
-  
-  const DashboardPremium({super.key, required this.userNama, required this.saldoAwal});
+
+  const DashboardPremium({
+    super.key,
+    required this.userNama,
+    required this.saldoAwal,
+  });
 
   @override
   State<DashboardPremium> createState() => _DashboardPremiumState();
@@ -174,13 +222,24 @@ class DashboardPremium extends StatefulWidget {
 
 class _DashboardPremiumState extends State<DashboardPremium> {
   late int totalSaldo;
+  String? displayNama;
   List<Map<String, dynamic>> transactions = [];
 
-  Map<String,double> hitungDataGrafik() {
+  double? saldoDatabase;
+
+  @override
+  void initState() {
+    super.initState();
+    displayNama = widget.userNama;
+    totalSaldo = widget.saldoAwal;
+    _refreshTransactions();
+  }
+
+  Map<String, double> hitungDataGrafik() {
     Map<String, double> dataMap = {};
 
     for (var item in transactions) {
-      String kategori = item ['category'].toString().trim();
+      String kategori = item['category'].toString().trim();
       double nominal = (item['amount'] as int).toDouble();
 
       if (nominal > 0) {
@@ -192,46 +251,48 @@ class _DashboardPremiumState extends State<DashboardPremium> {
       }
     }
     if (dataMap.isEmpty) return {"Belum  Ada Data": 0};
-    return dataMap;   
+    return dataMap;
   }
 
-  @override
-  void initState(){
-    super.initState();
-    totalSaldo = widget.saldoAwal;
-    _refreshTransactions();
-  }
   void _refreshTransactions() async {
-    final data = await
-    DatabaseHelper.instance.queryAllTransactions();
+    final data = await DatabaseHelper.instance.queryAllTransactions();
+    final db = await DatabaseHelper.instance.database;
+    final userData = await db.query('user', where: 'id = ?', whereArgs: [1]);
+
     setState(() {
       transactions = data;
-      int saldoSekarang = widget.saldoAwal;
+      if (userData.isNotEmpty) {
+        displayNama = userData.first['name'].toString();
+        saldoDatabase = (userData.first['balance'] as double);
+      }
+      double hitungSaldo = saldoDatabase ?? widget.saldoAwal.toDouble();
       for (var item in transactions) {
         if (item['type'] == 'Masuk') {
-          saldoSekarang += item['amount'] as int;
+          hitungSaldo += item['amount'] as int;
         } else {
-          saldoSekarang -= item['amount'] as int;
+          hitungSaldo -= item['amount'] as int;
         }
       }
-      totalSaldo = saldoSekarang;
+      totalSaldo = hitungSaldo.toInt();
     });
   }
-  
-  String formatWaktu(dynamic waktu) {
-    if (waktu == null || waktu is String) return "Baru Saja";
-    try {
-    DateTime waktuData = DateTime.parse(waktu.toString());
-    DateTime sekarang = DateTime.now();
-    Duration selisih = sekarang.difference(waktuData);
 
-    if (selisih.inMinutes < 1) return "Baru Saja";
-    if (selisih.inHours < 24 && waktuData.day == sekarang.day) return "Hari Ini";
-    if (selisih.inHours < 48 && waktuData.day == sekarang.day -1) return "Kemaren";
+  String formatWaktu(String dateString) {
+    DateTime date = DateTime.parse(dateString);
+    DateTime now = DateTime.now();
 
-    return "${waktuData.day}/${waktuData.month}/${waktuData.year}";
-    } catch (e) {
-      return "Baru Saja";
+    String tanggalAsli = "${date.day}/${date.month}/${date.year}";
+
+    final diff = now
+        .difference(DateTime(date.year, date.month, date.day))
+        .inDays;
+
+    if (diff == 0) {
+      return "Hari ini ($tanggalAsli)";
+    } else if (diff == 1) {
+      return "Kemarin ($tanggalAsli)";
+    } else {
+      return tanggalAsli;
     }
   }
 
@@ -263,7 +324,8 @@ class _DashboardPremiumState extends State<DashboardPremium> {
                             "Selamat Datang",
                             style: TextStyle(color: Colors.white, fontSize: 16),
                           ),
-                          Text(widget.userNama,
+                          Text(
+                            displayNama ?? widget.userNama,
                             style: TextStyle(
                               color: Colors.white,
                               fontSize: 24,
@@ -272,10 +334,29 @@ class _DashboardPremiumState extends State<DashboardPremium> {
                           ),
                         ],
                       ),
-                      const CircleAvatar(
-                        radius: 25,
-                        backgroundColor: Colors.white24,
-                        child: Icon(Icons.person, color: Colors.white),
+                      GestureDetector(
+                        onTap: () async {
+                          final refresh = await Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => EditProfilPage(
+                                currentName: displayNama ?? widget.userNama,
+                                currentBalance:
+                                    (saldoDatabase ??
+                                    widget.saldoAwal.toDouble()).toInt().toDouble(),
+                              ),
+                            ),
+                          );
+
+                          if (refresh == true) {
+                            _refreshTransactions();
+                          }
+                        },
+                        child: const CircleAvatar(
+                          radius: 25,
+                          backgroundColor: Colors.white24,
+                          child: Icon(Icons.person, color: Colors.white),
+                        ),
                       ),
                     ],
                   ),
@@ -294,8 +375,8 @@ class _DashboardPremiumState extends State<DashboardPremium> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        "Rp ${totalSaldo.toString().replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => '${m[1]}.')}",
-                        style: TextStyle(
+                        "Rp ${totalSaldo.toInt().toString().replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => '${m[1]}.')}",
+                        style: const TextStyle(
                           color: Colors.white,
                           fontSize: 32,
                           fontWeight: FontWeight.bold,
@@ -318,7 +399,7 @@ class _DashboardPremiumState extends State<DashboardPremium> {
                     Colors.redAccent,
                     Colors.teal,
                   ],
-                  chartType:  ChartType.ring,
+                  chartType: ChartType.ring,
                   legendOptions: const LegendOptions(
                     showLegends: true,
                     legendPosition: LegendPosition.right,
@@ -352,11 +433,14 @@ class _DashboardPremiumState extends State<DashboardPremium> {
                     itemCount: transactions.length,
                     itemBuilder: (context, index) {
                       IconData itemIcon = Icons.edit_note;
-                      Color itemColor = transactions[index]['type'] == 'Masuk' ? Colors.green : Colors.redAccent;
-                      
+                      Color itemColor = transactions[index]['type'] == 'Masuk'
+                          ? Colors.green
+                          : Colors.redAccent;
+
                       if (transactions[index]['category'] == 'Makan') {
                         itemIcon = Icons.fastfood;
-                      } else if (transactions[index]['category'] == 'Transport') {
+                      } else if (transactions[index]['category'] ==
+                          'Transport') {
                         itemIcon = Icons.directions_car;
                       } else if (transactions[index]['category'] == 'Belanja') {
                         itemIcon = Icons.shopping_bag;
@@ -364,12 +448,13 @@ class _DashboardPremiumState extends State<DashboardPremium> {
                         itemIcon = Icons.payments;
                       } else if (transactions[index]['category'] == 'Saku') {
                         itemIcon = Icons.account_balance_wallet;
-                      } else if (transactions[index]['category'] == 'Tabungan') {
+                      } else if (transactions[index]['category'] ==
+                          'Tabungan') {
                         itemIcon = Icons.savings;
                       } else if (transactions[index]['category'] == 'Lainnya') {
                         itemIcon = Icons.receipt_long;
                       } else {
-                      itemIcon = Icons.category;
+                        itemIcon = Icons.category;
                       }
                       return Dismissible(
                         key: UniqueKey(),
@@ -381,7 +466,7 @@ class _DashboardPremiumState extends State<DashboardPremium> {
                           child: const Icon(Icons.delete, color: Colors.white),
                         ),
                         onDismissed: (direction) async {
-                          int id = transactions[index]['id']; 
+                          int id = transactions[index]['id'];
                           await DatabaseHelper.instance.deleteTransaction(id);
                           _refreshTransactions();
                         },
@@ -394,10 +479,7 @@ class _DashboardPremiumState extends State<DashboardPremium> {
                           child: ListTile(
                             leading: CircleAvatar(
                               backgroundColor: itemColor.withOpacity(0.2),
-                              child: Icon(
-                                itemIcon,
-                                color: itemColor,
-                              ),
+                              child: Icon(itemIcon, color: itemColor),
                             ),
                             title: Text(
                               transactions[index]['name'] ?? 'Tanpa Nama',
@@ -408,7 +490,10 @@ class _DashboardPremiumState extends State<DashboardPremium> {
                             ),
                             subtitle: Text(
                               formatWaktu(transactions[index]['date']),
-                              style: const TextStyle(color: Colors.white54, fontSize: 12),
+                              style: const TextStyle(
+                                color: Colors.white54,
+                                fontSize: 12,
+                              ),
                             ),
                             trailing: Text(
                               "Rp ${transactions[index]['amount'].toString().replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => '${m[1]}.')}",
@@ -439,13 +524,17 @@ class _DashboardPremiumState extends State<DashboardPremium> {
           if (result != null) {
             await DatabaseHelper.instance.insertTransaction({
               'name': result['title'],
-              'amount': int.parse(result['amount'].toString().replaceAll(RegExp(r'[^0-9]'), '')),
+              'amount': int.parse(
+                result['amount'].toString().replaceAll(RegExp(r'[^0-9]'), ''),
+              ),
               'type': result['type'],
-              'category': result['icon'] == Icons.edit_note ? "Lainnya": result['title'],
+              'category': result['icon'] == Icons.edit_note
+                  ? "Lainnya"
+                  : result['title'],
               'date': DateTime.now().toString(),
             });
-            
-            _refreshTransactions(); 
+
+            _refreshTransactions();
           }
         },
         backgroundColor: const Color(0xFF2C5364),
@@ -483,18 +572,19 @@ class _AddTransactionPageState extends State<AddTransactionPage> {
         child: Container(
           padding: const EdgeInsets.symmetric(vertical: 12),
           decoration: BoxDecoration(
-            color: isSelected ? color: Colors.white10,
+            color: isSelected ? color : Colors.white10,
             borderRadius: BorderRadius.circular(12),
-            border: isSelected ? Border.all(color: Colors.white, width: 2) : null,
+            border: isSelected
+                ? Border.all(color: Colors.white, width: 2)
+                : null,
           ),
-            child: Center(
-              child: Text(label, style: const TextStyle(color: Colors.white)),
-            ), 
+          child: Center(
+            child: Text(label, style: const TextStyle(color: Colors.white)),
+          ),
         ),
       ),
     );
   }
-
 
   @override
   Widget build(BuildContext context) {
@@ -521,14 +611,13 @@ class _AddTransactionPageState extends State<AddTransactionPage> {
           children: [
             Row(
               children: [
-                _typeButton("Masuk", Colors.green), const SizedBox(width: 10),
+                _typeButton("Masuk", Colors.green),
+                const SizedBox(width: 10),
                 _typeButton("Keluar", Colors.redAccent),
               ],
             ),
             const SizedBox(height: 20),
-            const Text(
-              "Nominal", style: TextStyle(color: Colors.white54),
-            ),
+            const Text("Nominal", style: TextStyle(color: Colors.white54)),
             TextField(
               controller: _amountController,
               keyboardType: TextInputType.number,
@@ -555,7 +644,7 @@ class _AddTransactionPageState extends State<AddTransactionPage> {
               runSpacing: 20,
               alignment: WrapAlignment.center,
               children: [
-                if (type == "Keluar")...[
+                if (type == "Keluar") ...[
                   _categoryIcon(Icons.fastfood, "Makan"),
                   _categoryIcon(Icons.directions_car, "Transport"),
                   _categoryIcon(Icons.shopping_bag, "Belanja"),
@@ -568,25 +657,25 @@ class _AddTransactionPageState extends State<AddTransactionPage> {
               ],
             ),
             if (isOtherSelected)
-            Container(
-              margin: const EdgeInsets.only(top: 20),
-              padding: const EdgeInsets.symmetric(horizontal: 10),
-              decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.05),
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: TextField(
-                controller: _otherController,
-                autofocus: true,
-                style: const TextStyle(color: Colors.white),
-                decoration: const InputDecoration(
-                  hintText: "Ketik Keperluan disini...",
-                  hintStyle: TextStyle(color: Colors.white24),
-                  border: InputBorder.none,
-                  contentPadding: EdgeInsets.all(15),
+              Container(
+                margin: const EdgeInsets.only(top: 20),
+                padding: const EdgeInsets.symmetric(horizontal: 10),
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.05),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: TextField(
+                  controller: _otherController,
+                  autofocus: true,
+                  style: const TextStyle(color: Colors.white),
+                  decoration: const InputDecoration(
+                    hintText: "Ketik Keperluan disini...",
+                    hintStyle: TextStyle(color: Colors.white24),
+                    border: InputBorder.none,
+                    contentPadding: EdgeInsets.all(15),
+                  ),
                 ),
               ),
-            ),
             const Spacer(),
             SizedBox(
               width: double.infinity,
@@ -611,20 +700,34 @@ class _AddTransactionPageState extends State<AddTransactionPage> {
                       ),
                     );
                   } else {
-                    String finalTitle = (isOtherSelected && _otherController.text.isNotEmpty) ? _otherController.text: selectedCategory;
+                    String finalTitle =
+                        (isOtherSelected && _otherController.text.isNotEmpty)
+                        ? _otherController.text
+                        : selectedCategory;
                     Navigator.pop(context, {
                       "title": finalTitle,
-                      "amount": (type == "Masuk" ? "+ " : "- ") + "Rp ${_amountController.text}",
+                      "amount":
+                          (type == "Masuk" ? "+ " : "- ") +
+                          "Rp ${_amountController.text}",
                       "type": type,
-                      "icon": isOtherSelected ?
-                              Icons.edit_note: (selectedCategory == "Makan" ?
-                              Icons.fastfood: selectedCategory == "Transport" ?
-                              Icons.directions_car: selectedCategory == "Belanja" ?
-                              Icons.shopping_bag: selectedCategory == "Saku" ?
-                              Icons.account_balance_wallet: selectedCategory == "Gaji" ?
-                              Icons.payments: selectedCategory == "Tabungan" ? 
-                              Icons.savings: Icons.category),
-                      "color": type == "Masuk" ? Colors.green: Colors.redAccent,
+                      "icon": isOtherSelected
+                          ? Icons.edit_note
+                          : (selectedCategory == "Makan"
+                                ? Icons.fastfood
+                                : selectedCategory == "Transport"
+                                ? Icons.directions_car
+                                : selectedCategory == "Belanja"
+                                ? Icons.shopping_bag
+                                : selectedCategory == "Saku"
+                                ? Icons.account_balance_wallet
+                                : selectedCategory == "Gaji"
+                                ? Icons.payments
+                                : selectedCategory == "Tabungan"
+                                ? Icons.savings
+                                : Icons.category),
+                      "color": type == "Masuk"
+                          ? Colors.green
+                          : Colors.redAccent,
                       "time": DateTime.now(),
                     });
                     ScaffoldMessenger.of(context).showSnackBar(
