@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'db_helper.dart';
+import 'package:flutter/services.dart';
 
 class EditProfilPage extends StatefulWidget{
   final String currentName;
@@ -19,7 +20,22 @@ class _EditProfilePageState extends State<EditProfilPage> {
   void initState(){
     super.initState();
     _nameController = TextEditingController(text: widget.currentName);
-    _balanceController = TextEditingController(text: widget.currentBalance.toInt().toString());
+    String saldoMentah = widget.currentBalance.toInt().toString();
+    _balanceController = TextEditingController(text: formatTitikManual(saldoMentah));
+  }
+
+  String formatTitikManual(String value) {
+    if (value.isEmpty) return "";
+    String text = value.replaceAll(RegExp(r'[^0-9]'), '');
+    final chars = text.split('');
+    String newString = '';
+    for (int i = 0; i < chars.length; i++) {
+      if (i > 0 && (chars.length - i) % 3 == 0) {
+        newString += '.';
+      }
+      newString += chars[i];
+    }
+    return newString;
   }
 
   @override
@@ -57,6 +73,10 @@ class _EditProfilePageState extends State<EditProfilPage> {
             TextField(
               controller: _balanceController,
               keyboardType: TextInputType.number,
+              inputFormatters: [
+                FilteringTextInputFormatter.digitsOnly,
+                ThousandSeparatorFormatter(), 
+                ],
               style: TextStyle(color: Colors.white),
               decoration: InputDecoration(
                 labelText: "Saldo Awal",
@@ -73,22 +93,44 @@ class _EditProfilePageState extends State<EditProfilPage> {
               width: double.infinity,
               height: 50,
               child: ElevatedButton(
-                onPressed: () async {
-                  String namaInput = _nameController.text;
-                  double saldoInput = double.tryParse(_balanceController.text) ?? 0.0;
-                  
-                  await DatabaseHelper.instance.updateUser(namaInput, saldoInput);
-
-                  if (mounted) {
-                    Navigator.pop(context, true); 
-                  } 
-                },
+               onPressed: () async {
+                String namaInput = _nameController.text;
+                String cleanSaldo = _balanceController.text.replaceAll('.', '');
+                double saldoInput = double.tryParse(cleanSaldo) ?? 0.0;
+                
+                await DatabaseHelper.instance.updateUser(namaInput, saldoInput);
+                
+                if (mounted) {
+                  Navigator.pop(context, true); 
+                } 
+              },
                 child: Text("Simpan Perubahan", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
               ),
             ),
           ],
         ),
       ),
+    );
+  }
+}
+
+class ThousandSeparatorFormatter extends TextInputFormatter {
+  @override 
+  TextEditingValue formatEditUpdate(
+      TextEditingValue oldValue, TextEditingValue newValue) {
+    if (newValue.selection.baseOffset == 0) return newValue;
+    String text = newValue.text.replaceAll(RegExp(r'[^0-9]'), '');
+    final chars = text.split('');
+    String newString = '';
+    for (int i = 0; i < chars.length; i++) {
+      if (i > 0 && (chars.length - i) % 3 == 0) {
+        newString += '.';
+      }
+      newString += chars[i];
+    }
+    return TextEditingValue(
+      text: newString,
+      selection: TextSelection.collapsed(offset: newString.length),
     );
   }
 }

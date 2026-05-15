@@ -140,6 +140,10 @@ class _InitialSetupPageState extends State<InitialSetupPage> {
             TextField(
               controller: _balanceController,
               keyboardType: TextInputType.number,
+              inputFormatters: [
+                FilteringTextInputFormatter.digitsOnly,
+                ThousandSeparatorFormatter(), 
+              ],
               style: const TextStyle(color: Colors.white),
               decoration: InputDecoration(
                 hintText: "Saldo Awal (Rp )",
@@ -167,7 +171,7 @@ class _InitialSetupPageState extends State<InitialSetupPage> {
                       _balanceController.text.isNotEmpty) {
                     final prefs = await SharedPreferences.getInstance();
                     String namaInput = _nameController.text;
-                    int saldoInput = int.parse(_balanceController.text);
+                    int saldoInput = int.parse(_balanceController.text.replaceAll('.', ''));
 
                     await prefs.setString('userNama', namaInput);
                     await prefs.setInt('totalSaldo', saldoInput);
@@ -621,7 +625,10 @@ class _AddTransactionPageState extends State<AddTransactionPage> {
             TextField(
               controller: _amountController,
               keyboardType: TextInputType.number,
-              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+              inputFormatters: [
+                FilteringTextInputFormatter.digitsOnly,
+                ThousandSeparatorFormatter(),
+              ],
               style: const TextStyle(
                 color: Colors.white,
                 fontSize: 45,
@@ -689,9 +696,9 @@ class _AddTransactionPageState extends State<AddTransactionPage> {
                   ),
                 ),
                 onPressed: () {
-                  String isiNominal = _amountController.text;
+                  String cleanNominal = _amountController.text.replaceAll('.', '');
 
-                  if (isiNominal.isEmpty || selectedCategory.isEmpty) {
+                  if (cleanNominal.isEmpty || selectedCategory.isEmpty) {
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(
                         content: Text(
@@ -794,6 +801,27 @@ class _AddTransactionPageState extends State<AddTransactionPage> {
           ),
         ],
       ),
+    );
+  }
+}
+
+class ThousandSeparatorFormatter extends TextInputFormatter {
+  @override 
+  TextEditingValue formatEditUpdate(
+      TextEditingValue oldValue, TextEditingValue newValue) {
+    if (newValue.selection.baseOffset == 0) return newValue;
+    String text = newValue.text.replaceAll(RegExp(r'[^0-9]'), '');
+    final chars = text.split('');
+    String newString = '';
+    for (int i = 0; i < chars.length; i++) {
+      if (i > 0 && (chars.length - i) % 3 == 0) {
+        newString += '.';
+      }
+      newString += chars[i];
+    }
+    return TextEditingValue(
+      text: newString,
+      selection: TextSelection.collapsed(offset: newString.length),
     );
   }
 }
