@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'db_helper.dart';
 import 'package:flutter/services.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'main.dart';
 
-class EditProfilPage extends StatefulWidget{
+class EditProfilPage extends StatefulWidget {
   final String currentName;
   final double currentBalance;
 
@@ -17,11 +19,13 @@ class _EditProfilePageState extends State<EditProfilPage> {
   late TextEditingController _balanceController;
 
   @override
-  void initState(){
+  void initState() {
     super.initState();
     _nameController = TextEditingController(text: widget.currentName);
     String saldoMentah = widget.currentBalance.toInt().toString();
-    _balanceController = TextEditingController(text: formatTitikManual(saldoMentah));
+    _balanceController = TextEditingController(
+      text: formatTitikManual(saldoMentah),
+    );
   }
 
   String formatTitikManual(String value) {
@@ -42,11 +46,14 @@ class _EditProfilePageState extends State<EditProfilPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text("Edit Profil", style: TextStyle(fontWeight: FontWeight.bold)),
+        title: Text(
+          "Edit Profil",
+          style: TextStyle(fontWeight: FontWeight.bold),
+        ),
         backgroundColor: Color(0xFF1D2631),
         elevation: 0,
       ),
-      backgroundColor: Color(0xFF121A21), 
+      backgroundColor: Color(0xFF121A21),
       body: Padding(
         padding: const EdgeInsets.all(20.0),
         child: Column(
@@ -57,34 +64,42 @@ class _EditProfilePageState extends State<EditProfilPage> {
               child: Icon(Icons.person, size: 50, color: Colors.blueAccent),
             ),
             SizedBox(height: 30),
-           
+
             TextField(
               controller: _nameController,
               style: TextStyle(color: Colors.white),
               decoration: InputDecoration(
                 labelText: "Nama Pengguna",
                 labelStyle: TextStyle(color: Colors.blueAccent),
-                enabledBorder: OutlineInputBorder(borderSide: BorderSide(color: Colors.grey)),
-                focusedBorder: OutlineInputBorder(borderSide: BorderSide(color: Colors.blueAccent)),
+                enabledBorder: OutlineInputBorder(
+                  borderSide: BorderSide(color: Colors.grey),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderSide: BorderSide(color: Colors.blueAccent),
+                ),
               ),
             ),
             SizedBox(height: 20),
-    
+
             TextField(
               controller: _balanceController,
               keyboardType: TextInputType.number,
               inputFormatters: [
                 FilteringTextInputFormatter.digitsOnly,
-                ThousandSeparatorFormatter(), 
-                ],
+                ThousandSeparatorFormatter(),
+              ],
               style: TextStyle(color: Colors.white),
               decoration: InputDecoration(
                 labelText: "Saldo Awal",
                 labelStyle: TextStyle(color: Colors.blueAccent),
                 prefixText: "Rp ",
                 prefixStyle: TextStyle(color: Colors.white),
-                enabledBorder: OutlineInputBorder(borderSide: BorderSide(color: Colors.grey)),
-                focusedBorder: OutlineInputBorder(borderSide: BorderSide(color: Colors.blueAccent)),
+                enabledBorder: OutlineInputBorder(
+                  borderSide: BorderSide(color: Colors.grey),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderSide: BorderSide(color: Colors.blueAccent),
+                ),
               ),
             ),
             SizedBox(height: 40),
@@ -93,18 +108,91 @@ class _EditProfilePageState extends State<EditProfilPage> {
               width: double.infinity,
               height: 50,
               child: ElevatedButton(
-               onPressed: () async {
-                String namaInput = _nameController.text;
-                String cleanSaldo = _balanceController.text.replaceAll('.', '');
-                double saldoInput = double.tryParse(cleanSaldo) ?? 0.0;
-                
-                await DatabaseHelper.instance.updateUser(namaInput, saldoInput);
-                
-                if (mounted) {
-                  Navigator.pop(context, true); 
-                } 
-              },
-                child: Text("Simpan Perubahan", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                onPressed: () async {
+                  String namaInput = _nameController.text;
+                  String cleanSaldo = _balanceController.text.replaceAll(
+                    '.',
+                    '',
+                  );
+                  double saldoInput = double.tryParse(cleanSaldo) ?? 0.0;
+
+                  await DatabaseHelper.instance.updateUser(
+                    namaInput,
+                    saldoInput,
+                  );
+
+                  if (mounted) {
+                    Navigator.pop(context, true);
+                  }
+                },
+                child: Text(
+                  "Simpan Perubahan",
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                ),
+              ),
+            ),
+            const SizedBox(height: 15),
+            SizedBox(
+              width: double.infinity,
+              height: 50,
+              child: OutlinedButton(
+                style: OutlinedButton.styleFrom(
+                  side: const BorderSide(color: Colors.redAccent),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                onPressed: () {
+                  showDialog(
+                    context: context,
+                    builder: (context) => AlertDialog(
+                      backgroundColor: const Color(0xFF1D2631),
+                      title: const Text(
+                        "Reset Aplikasi?",
+                        style: TextStyle(color: Colors.white),
+                      ),
+                      content: const Text(
+                        "Semua data profil dan riwayat transaksi akan dihapus permanen.",
+                        style: TextStyle(color: Colors.white70),
+                      ),
+                      actions: [
+                        TextButton(
+                          onPressed: () => Navigator.pop(context),
+                          child: const Text("Batal"),
+                        ),
+                        TextButton(
+                          onPressed: () async {
+                            final prefs = await SharedPreferences.getInstance();
+                            await prefs.clear();
+
+                            await DatabaseHelper.instance.deleteAllData();
+
+                            if (mounted) {
+                              Navigator.pushAndRemoveUntil(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => const FlowCashApp(),
+                                ),
+                                (route) => false,
+                              );
+                            }
+                          },
+                          child: const Text(
+                            "Ya, Reset",
+                            style: TextStyle(color: Colors.redAccent),
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                },
+                child: const Text(
+                  "RESET APLIKASI",
+                  style: TextStyle(
+                    color: Colors.redAccent,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
               ),
             ),
           ],
@@ -115,9 +203,11 @@ class _EditProfilePageState extends State<EditProfilPage> {
 }
 
 class ThousandSeparatorFormatter extends TextInputFormatter {
-  @override 
+  @override
   TextEditingValue formatEditUpdate(
-      TextEditingValue oldValue, TextEditingValue newValue) {
+    TextEditingValue oldValue,
+    TextEditingValue newValue,
+  ) {
     if (newValue.selection.baseOffset == 0) return newValue;
     String text = newValue.text.replaceAll(RegExp(r'[^0-9]'), '');
     final chars = text.split('');

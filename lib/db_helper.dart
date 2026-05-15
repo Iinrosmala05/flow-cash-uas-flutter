@@ -67,4 +67,10 @@ class DatabaseHelper {
       whereArgs: [1],
     );
   }
+
+  Future<void> deleteAllData() async {
+    final db = await instance.database;
+    await db.delete('transactions'); 
+    await db.delete('user');        
+  }
 }
