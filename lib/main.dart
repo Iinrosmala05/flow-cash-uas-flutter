@@ -142,7 +142,7 @@ class _InitialSetupPageState extends State<InitialSetupPage> {
               keyboardType: TextInputType.number,
               inputFormatters: [
                 FilteringTextInputFormatter.digitsOnly,
-                ThousandSeparatorFormatter(), 
+                ThousandSeparatorFormatter(),
               ],
               style: const TextStyle(color: Colors.white),
               decoration: InputDecoration(
@@ -171,7 +171,9 @@ class _InitialSetupPageState extends State<InitialSetupPage> {
                       _balanceController.text.isNotEmpty) {
                     final prefs = await SharedPreferences.getInstance();
                     String namaInput = _nameController.text;
-                    int saldoInput = int.parse(_balanceController.text.replaceAll('.', ''));
+                    int saldoInput = int.parse(
+                      _balanceController.text.replaceAll('.', ''),
+                    );
 
                     await prefs.setString('userNama', namaInput);
                     await prefs.setInt('totalSaldo', saldoInput);
@@ -231,6 +233,8 @@ class _DashboardPremiumState extends State<DashboardPremium> {
 
   double? saldoDatabase;
 
+  String selectedFilter = "Semua";
+
   @override
   void initState() {
     super.initState();
@@ -254,7 +258,7 @@ class _DashboardPremiumState extends State<DashboardPremium> {
         }
       }
     }
-    if (dataMap.isEmpty) return {"Belum  Ada Data": 0};
+    if (dataMap.isEmpty) return {"Belum Ada Data": 0};
     return dataMap;
   }
 
@@ -264,13 +268,19 @@ class _DashboardPremiumState extends State<DashboardPremium> {
     final userData = await db.query('user', where: 'id = ?', whereArgs: [1]);
 
     setState(() {
-      transactions = data;
+      if (selectedFilter == "Semua") {
+        transactions = data;
+      } else {
+        transactions = data.where((t) => t['type'] == selectedFilter).toList();
+      }
+
       if (userData.isNotEmpty) {
         displayNama = userData.first['name'].toString();
         saldoDatabase = (userData.first['balance'] as double);
       }
+
       double hitungSaldo = saldoDatabase ?? widget.saldoAwal.toDouble();
-      for (var item in transactions) {
+      for (var item in data) {
         if (item['type'] == 'Masuk') {
           hitungSaldo += item['amount'] as int;
         } else {
@@ -298,6 +308,36 @@ class _DashboardPremiumState extends State<DashboardPremium> {
     } else {
       return tanggalAsli;
     }
+  }
+
+  Widget _buildFilterChip(String label) {
+    bool isSelected = selectedFilter == label;
+    return GestureDetector(
+      onTap: () {
+        setState(() {
+          selectedFilter = label;
+        });
+        _refreshTransactions();
+      },
+      child: Container(
+        width: 90,
+        padding: const EdgeInsets.symmetric(vertical: 8),
+        alignment: Alignment.center, 
+        decoration: BoxDecoration(
+          color: isSelected ? Colors.blueAccent : Colors.white10,
+          borderRadius: BorderRadius.circular(20),
+          border: isSelected ? Border.all(color: Colors.white, width: 1) : null,
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            color: isSelected ? Colors.white : Colors.white60,
+            fontSize: 12,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+      ),
+    );
   }
 
   @override
@@ -347,7 +387,9 @@ class _DashboardPremiumState extends State<DashboardPremium> {
                                 currentName: displayNama ?? widget.userNama,
                                 currentBalance:
                                     (saldoDatabase ??
-                                    widget.saldoAwal.toDouble()).toInt().toDouble(),
+                                            widget.saldoAwal.toDouble())
+                                        .toInt()
+                                        .toDouble(),
                               ),
                             ),
                           );
@@ -415,6 +457,20 @@ class _DashboardPremiumState extends State<DashboardPremium> {
                   ),
                 ),
                 const SizedBox(height: 40),
+
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 25),
+                  child: Row(
+                    children: [
+                      _buildFilterChip("Semua"),
+                      const SizedBox(width: 10),
+                      _buildFilterChip("Masuk"),
+                      const SizedBox(width: 10),
+                      _buildFilterChip("Keluar"),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 20),
 
                 const Padding(
                   padding: EdgeInsets.symmetric(horizontal: 25),
@@ -696,7 +752,10 @@ class _AddTransactionPageState extends State<AddTransactionPage> {
                   ),
                 ),
                 onPressed: () {
-                  String cleanNominal = _amountController.text.replaceAll('.', '');
+                  String cleanNominal = _amountController.text.replaceAll(
+                    '.',
+                    '',
+                  );
 
                   if (cleanNominal.isEmpty || selectedCategory.isEmpty) {
                     ScaffoldMessenger.of(context).showSnackBar(
@@ -806,9 +865,11 @@ class _AddTransactionPageState extends State<AddTransactionPage> {
 }
 
 class ThousandSeparatorFormatter extends TextInputFormatter {
-  @override 
+  @override
   TextEditingValue formatEditUpdate(
-      TextEditingValue oldValue, TextEditingValue newValue) {
+    TextEditingValue oldValue,
+    TextEditingValue newValue,
+  ) {
     if (newValue.selection.baseOffset == 0) return newValue;
     String text = newValue.text.replaceAll(RegExp(r'[^0-9]'), '');
     final chars = text.split('');
