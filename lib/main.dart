@@ -235,6 +235,9 @@ class _DashboardPremiumState extends State<DashboardPremium> {
 
   String selectedFilter = "Semua";
 
+  final TextEditingController _searchController = TextEditingController();
+  String _searchQuery = "";
+
   @override
   void initState() {
     super.initState();
@@ -268,11 +271,11 @@ class _DashboardPremiumState extends State<DashboardPremium> {
     final userData = await db.query('user', where: 'id = ?', whereArgs: [1]);
 
     setState(() {
-      if (selectedFilter == "Semua") {
-        transactions = data;
-      } else {
-        transactions = data.where((t) => t['type'] == selectedFilter).toList();
-      }
+      transactions = data.where((t) {
+        bool matchType = (selectedFilter == "Semua") || (t['type'] == selectedFilter);
+        bool matchSearch = (t['name'] ?? '').toString().toLowerCase().contains(_searchQuery.toLowerCase());
+        return matchType && matchSearch;
+      }).toList();
 
       if (userData.isNotEmpty) {
         displayNama = userData.first['name'].toString();
@@ -431,7 +434,34 @@ class _DashboardPremiumState extends State<DashboardPremium> {
                     ],
                   ),
                 ),
-                const SizedBox(height: 30),
+                const SizedBox(height: 10),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 25, vertical: 15),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.05),
+                      borderRadius: BorderRadius.circular(15),
+                    ),
+                    child: TextField(
+                      controller: _searchController,
+                      onChanged: (value) {
+                        setState(() {
+                          _searchQuery = value;
+                        });
+                        _refreshTransactions();
+                      },
+                      style: const TextStyle(color: Colors.white),
+                      decoration: InputDecoration(
+                        hintText: "Cari riwayat transaksi...",
+                        hintStyle: const TextStyle(color: Colors.white38, fontSize: 14),
+                        prefixIcon: const Icon(Icons.search, color: Colors.white54),
+                        border: InputBorder.none,
+                        contentPadding: const EdgeInsets.symmetric(vertical: 12),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 10),
 
                 PieChart(
                   dataMap: hitungDataGrafik(),
