@@ -502,6 +502,39 @@ class _DashboardPremiumState extends State<DashboardPremium> {
                 ),
                 const SizedBox(height: 20),
 
+                if (selectedFilter == "Semua" || selectedFilter == "Keluar")
+                
+                Container(
+                  margin: const EdgeInsets.symmetric(horizontal: 25, vertical: 10),
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    color: Colors.orangeAccent.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(color: Colors.orangeAccent.withOpacity(0.3)),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.analytics, color: Colors.orangeAccent, size: 30),
+                      const SizedBox(width: 15),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              "Insight Pengeluaran",
+                              style: TextStyle(color: Colors.orangeAccent, fontSize: 12, fontWeight: FontWeight.bold),
+                            ),
+                            Text(
+                              "Paling banyak untuk: ${getKategoriTerboros()}",
+                              style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w500),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
                 const Padding(
                   padding: EdgeInsets.symmetric(horizontal: 25),
                   child: Text(
@@ -631,6 +664,20 @@ class _DashboardPremiumState extends State<DashboardPremium> {
         child: const Icon(Icons.add, color: Colors.white),
       ),
     );
+  }
+   String getKategoriTerboros() {
+    Map<String, int> pengeluaranPerKategori = {};
+    for (var item in transactions) {
+      if (item['type'] == 'Keluar') {
+        String cat = item['category'] ?? 'Lainnya';
+        int amt = item['amount'] as int;
+        pengeluaranPerKategori[cat] = (pengeluaranPerKategori[cat] ?? 0) + amt;
+      }
+    }
+    if (pengeluaranPerKategori.isEmpty) return "Belum ada pengeluaran";
+    var sortedKeys = pengeluaranPerKategori.keys.toList(growable: false)
+      ..sort((k1, k2) => pengeluaranPerKategori[k2]!.compareTo(pengeluaranPerKategori[k1]!));
+    return sortedKeys.first;
   }
 }
 
