@@ -34,7 +34,7 @@ class _SplashScreenState extends State<SplashScreen> {
   void initState() {
     super.initState();
 
-    Future.delayed(const Duration(seconds: 6), () async {
+    Future.delayed(const Duration(seconds: 4), () async {
       final prefs = await SharedPreferences.getInstance();
       final String? nama = prefs.getString('userNama');
       final int? saldo = prefs.getInt('totalSaldo');
@@ -314,6 +314,9 @@ class _DashboardPremiumState extends State<DashboardPremium> {
   }
 
   Widget _buildFilterChip(String label) {
+    String displayLabel = label;
+    if (label == "Masuk") displayLabel = "Pemasukan";
+    if (label == "Keluar") displayLabel = "Pengeluaran";
     bool isSelected = selectedFilter == label;
     return GestureDetector(
       onTap: () {
@@ -323,8 +326,7 @@ class _DashboardPremiumState extends State<DashboardPremium> {
         _refreshTransactions();
       },
       child: Container(
-        width: 90,
-        padding: const EdgeInsets.symmetric(vertical: 8),
+        padding: const EdgeInsets.symmetric(vertical: 12),
         alignment: Alignment.center, 
         decoration: BoxDecoration(
           color: isSelected ? Colors.blueAccent : Colors.white10,
@@ -332,10 +334,10 @@ class _DashboardPremiumState extends State<DashboardPremium> {
           border: isSelected ? Border.all(color: Colors.white, width: 1) : null,
         ),
         child: Text(
-          label,
+          displayLabel,
           style: TextStyle(
             color: isSelected ? Colors.white : Colors.white60,
-            fontSize: 12,
+            fontSize: 11,
             fontWeight: FontWeight.bold,
           ),
         ),
@@ -345,6 +347,14 @@ class _DashboardPremiumState extends State<DashboardPremium> {
 
   @override
   Widget build(BuildContext context) {
+    List filteredTransactions = transactions.where((item) {
+      bool matchFilter = selectedFilter == "Semua" || item['type'] == selectedFilter;
+      bool matchSearch = item['category']
+          .toString()
+          .toLowerCase()
+          .contains(_searchController.text.toLowerCase());
+      return matchFilter && matchSearch;
+    }).toList();
     return Scaffold(
       body: Container(
         decoration: const BoxDecoration(
@@ -492,11 +502,11 @@ class _DashboardPremiumState extends State<DashboardPremium> {
                   padding: const EdgeInsets.symmetric(horizontal: 25),
                   child: Row(
                     children: [
-                      _buildFilterChip("Semua"),
-                      const SizedBox(width: 10),
-                      _buildFilterChip("Masuk"),
-                      const SizedBox(width: 10),
-                      _buildFilterChip("Keluar"),
+                      Expanded(child: _buildFilterChip("Semua")),
+                      const SizedBox(width: 8),
+                      Expanded(child: _buildFilterChip("Masuk")),
+                      const SizedBox(width: 8),
+                      Expanded(child: _buildFilterChip("Keluar")),
                     ],
                   ),
                 ),
@@ -547,7 +557,26 @@ class _DashboardPremiumState extends State<DashboardPremium> {
                   ),
                 ),
                 const SizedBox(height: 10),
-
+                if (filteredTransactions.isEmpty)
+                  Center(
+                    child: Column(
+                      children: [
+                        const SizedBox(height: 40),
+                        Icon(
+                          Icons.search_off_rounded,
+                          size: 80,
+                          color: Colors.white.withOpacity(0.2),
+                        ),
+                        const SizedBox(height: 20),
+                        Text(
+                          "Yah, transaksinya nggak ada...",
+                          style: TextStyle(color: Colors.white.withOpacity(0.5)),
+                        ),
+                        const SizedBox(height: 40),
+                      ],
+                    ),
+                  )
+                else
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 25),
                   child: ListView.builder(
@@ -660,7 +689,7 @@ class _DashboardPremiumState extends State<DashboardPremium> {
             _refreshTransactions();
           }
         },
-        backgroundColor: const Color(0xFF2C5364),
+        backgroundColor: const Color.fromARGB(255, 89, 122, 136),
         child: const Icon(Icons.add, color: Colors.white),
       ),
     );
