@@ -6,6 +6,10 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'db_helper.dart';
 import 'edit_profil_page.dart';
 import 'package:sqflite/sqflite.dart';
+import 'package:pdf/pdf.dart';
+import 'package:pdf/widgets.dart' as pw;
+import 'package:printing/printing.dart';
+import 'package:intl/intl.dart';
 
 void main() => runApp(const FlowCashApp());
 
@@ -238,6 +242,37 @@ class _DashboardPremiumState extends State<DashboardPremium> {
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = "";
 
+  Future<void> _cetakLaporanPDF() async {
+  final pdf = pw.Document();
+  final formatCurrency = NumberFormat("#,###", "id_ID");
+
+  transactions.sort((a, b) => b['date'].toString().compareTo(a['date'].toString()));
+
+  pdf.addPage(
+    pw.MultiPage(
+      build: (context) => [
+        pw.Header(level: 0, text: 'Laporan Keuangan FlowCash'),
+        pw.SizedBox(height: 20),
+        pw.TableHelper.fromTextArray(
+          headers: ['Tanggal', 'Nama', 'Type', 'Nominal'],
+          data: transactions.map((item) {
+            return [
+              item['date'].toString().substring(0, 10), 
+              item['name'] ?? '',                       
+              item['type'] ?? '',                       
+              formatCurrency.format(double.tryParse(item['amount'].toString()) ?? 0), 
+            ];
+          }).toList(),
+        ),
+      ],
+    ),
+  );
+
+  await Printing.layoutPdf(
+    onLayout: (PdfPageFormat format) async => pdf.save(),
+  );
+}
+
   @override
   void initState() {
     super.initState();
@@ -272,8 +307,11 @@ class _DashboardPremiumState extends State<DashboardPremium> {
 
     setState(() {
       transactions = data.where((t) {
-        bool matchType = (selectedFilter == "Semua") || (t['type'] == selectedFilter);
-        bool matchSearch = (t['name'] ?? '').toString().toLowerCase().contains(_searchQuery.toLowerCase());
+        bool matchType =
+            (selectedFilter == "Semua") || (t['type'] == selectedFilter);
+        bool matchSearch = (t['name'] ?? '').toString().toLowerCase().contains(
+          _searchQuery.toLowerCase(),
+        );
         return matchType && matchSearch;
       }).toList();
 
@@ -327,7 +365,7 @@ class _DashboardPremiumState extends State<DashboardPremium> {
       },
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 12),
-        alignment: Alignment.center, 
+        alignment: Alignment.center,
         decoration: BoxDecoration(
           color: isSelected ? Colors.blueAccent : Colors.white10,
           borderRadius: BorderRadius.circular(20),
@@ -348,11 +386,11 @@ class _DashboardPremiumState extends State<DashboardPremium> {
   @override
   Widget build(BuildContext context) {
     List filteredTransactions = transactions.where((item) {
-      bool matchFilter = selectedFilter == "Semua" || item['type'] == selectedFilter;
-      bool matchSearch = item['category']
-          .toString()
-          .toLowerCase()
-          .contains(_searchController.text.toLowerCase());
+      bool matchFilter =
+          selectedFilter == "Semua" || item['type'] == selectedFilter;
+      bool matchSearch = item['category'].toString().toLowerCase().contains(
+        _searchController.text.toLowerCase(),
+      );
       return matchFilter && matchSearch;
     }).toList();
     return Scaffold(
@@ -391,31 +429,41 @@ class _DashboardPremiumState extends State<DashboardPremium> {
                           ),
                         ],
                       ),
-                      GestureDetector(
-                        onTap: () async {
-                          final refresh = await Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => EditProfilPage(
-                                currentName: displayNama ?? widget.userNama,
-                                currentBalance:
-                                    (saldoDatabase ??
-                                            widget.saldoAwal.toDouble())
-                                        .toInt()
-                                        .toDouble(),
-                              ),
+                      Row(
+                        children: [
+                          IconButton(
+                            icon: const Icon(Icons.print, color: Colors.white),
+                            onPressed: () {
+                              _cetakLaporanPDF();
+                            },
+                          ),
+                          const SizedBox(width: 8),
+                          GestureDetector(
+                            onTap: () async {
+                              final refresh = await Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => EditProfilPage(
+                                    currentName: displayNama ?? widget.userNama,
+                                    currentBalance:
+                                        (saldoDatabase ??
+                                                widget.saldoAwal.toDouble())
+                                            .toInt()
+                                            .toDouble(),
+                                  ),
+                                ),
+                              );
+                              if (refresh == true) {
+                                _refreshTransactions();
+                              }
+                            },
+                            child: const CircleAvatar(
+                              radius: 25,
+                              backgroundColor: Colors.white24,
+                              child: Icon(Icons.person, color: Colors.white),
                             ),
-                          );
-
-                          if (refresh == true) {
-                            _refreshTransactions();
-                          }
-                        },
-                        child: const CircleAvatar(
-                          radius: 25,
-                          backgroundColor: Colors.white24,
-                          child: Icon(Icons.person, color: Colors.white),
-                        ),
+                          ),
+                        ],
                       ),
                     ],
                   ),
@@ -446,7 +494,10 @@ class _DashboardPremiumState extends State<DashboardPremium> {
                 ),
                 const SizedBox(height: 10),
                 Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 25, vertical: 15),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 25,
+                    vertical: 15,
+                  ),
                   child: Container(
                     decoration: BoxDecoration(
                       color: Colors.white.withOpacity(0.05),
@@ -463,10 +514,18 @@ class _DashboardPremiumState extends State<DashboardPremium> {
                       style: const TextStyle(color: Colors.white),
                       decoration: InputDecoration(
                         hintText: "Cari riwayat transaksi...",
-                        hintStyle: const TextStyle(color: Colors.white38, fontSize: 14),
-                        prefixIcon: const Icon(Icons.search, color: Colors.white54),
+                        hintStyle: const TextStyle(
+                          color: Colors.white38,
+                          fontSize: 14,
+                        ),
+                        prefixIcon: const Icon(
+                          Icons.search,
+                          color: Colors.white54,
+                        ),
                         border: InputBorder.none,
-                        contentPadding: const EdgeInsets.symmetric(vertical: 12),
+                        contentPadding: const EdgeInsets.symmetric(
+                          vertical: 12,
+                        ),
                       ),
                     ),
                   ),
@@ -513,37 +572,53 @@ class _DashboardPremiumState extends State<DashboardPremium> {
                 const SizedBox(height: 20),
 
                 if (selectedFilter == "Semua" || selectedFilter == "Keluar")
-                
-                Container(
-                  margin: const EdgeInsets.symmetric(horizontal: 25, vertical: 10),
-                  padding: const EdgeInsets.all(20),
-                  decoration: BoxDecoration(
-                    color: Colors.orangeAccent.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: Colors.orangeAccent.withOpacity(0.3)),
-                  ),
-                  child: Row(
-                    children: [
-                      const Icon(Icons.analytics, color: Colors.orangeAccent, size: 30),
-                      const SizedBox(width: 15),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Text(
-                              "Insight Pengeluaran",
-                              style: TextStyle(color: Colors.orangeAccent, fontSize: 12, fontWeight: FontWeight.bold),
-                            ),
-                            Text(
-                              "Paling banyak untuk: ${getKategoriTerboros()}",
-                              style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w500),
-                            ),
-                          ],
-                        ),
+                  Container(
+                    margin: const EdgeInsets.symmetric(
+                      horizontal: 25,
+                      vertical: 10,
+                    ),
+                    padding: const EdgeInsets.all(20),
+                    decoration: BoxDecoration(
+                      color: Colors.orangeAccent.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(
+                        color: Colors.orangeAccent.withOpacity(0.3),
                       ),
-                    ],
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(
+                          Icons.analytics,
+                          color: Colors.orangeAccent,
+                          size: 30,
+                        ),
+                        const SizedBox(width: 15),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text(
+                                "Insight Pengeluaran",
+                                style: TextStyle(
+                                  color: Colors.orangeAccent,
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              Text(
+                                "Paling banyak untuk: ${getKategoriTerboros()}",
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
-                ),
 
                 const Padding(
                   padding: EdgeInsets.symmetric(horizontal: 25),
@@ -570,97 +645,104 @@ class _DashboardPremiumState extends State<DashboardPremium> {
                         const SizedBox(height: 20),
                         Text(
                           "Yah, transaksinya nggak ada...",
-                          style: TextStyle(color: Colors.white.withOpacity(0.5)),
+                          style: TextStyle(
+                            color: Colors.white.withOpacity(0.5),
+                          ),
                         ),
                         const SizedBox(height: 40),
                       ],
                     ),
                   )
                 else
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 25),
-                  child: ListView.builder(
-                    shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
-                    itemCount: transactions.length,
-                    itemBuilder: (context, index) {
-                      IconData itemIcon = Icons.edit_note;
-                      Color itemColor = transactions[index]['type'] == 'Masuk'
-                          ? Colors.green
-                          : Colors.redAccent;
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 25),
+                    child: ListView.builder(
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      itemCount: transactions.length,
+                      itemBuilder: (context, index) {
+                        IconData itemIcon = Icons.edit_note;
+                        Color itemColor = transactions[index]['type'] == 'Masuk'
+                            ? Colors.green
+                            : Colors.redAccent;
 
-                      if (transactions[index]['category'] == 'Makan') {
-                        itemIcon = Icons.fastfood;
-                      } else if (transactions[index]['category'] ==
-                          'Transport') {
-                        itemIcon = Icons.directions_car;
-                      } else if (transactions[index]['category'] == 'Belanja') {
-                        itemIcon = Icons.shopping_bag;
-                      } else if (transactions[index]['category'] == 'Gaji') {
-                        itemIcon = Icons.payments;
-                      } else if (transactions[index]['category'] == 'Saku') {
-                        itemIcon = Icons.account_balance_wallet;
-                      } else if (transactions[index]['category'] ==
-                          'Tabungan') {
-                        itemIcon = Icons.savings;
-                      } else if (transactions[index]['category'] == 'Lainnya') {
-                        itemIcon = Icons.receipt_long;
-                      } else {
-                        itemIcon = Icons.category;
-                      }
-                      return Dismissible(
-                        key: UniqueKey(),
-                        direction: DismissDirection.endToStart,
-                        background: Container(
-                          alignment: Alignment.centerRight,
-                          padding: const EdgeInsets.only(right: 20),
-                          color: Colors.red,
-                          child: const Icon(Icons.delete, color: Colors.white),
-                        ),
-                        onDismissed: (direction) async {
-                          int id = transactions[index]['id'];
-                          await DatabaseHelper.instance.deleteTransaction(id);
-                          _refreshTransactions();
-                        },
-                        child: Card(
-                          color: Colors.white.withOpacity(0.05),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(15),
-                          ),
-                          margin: const EdgeInsets.symmetric(vertical: 8),
-                          child: ListTile(
-                            leading: CircleAvatar(
-                              backgroundColor: itemColor.withOpacity(0.2),
-                              child: Icon(itemIcon, color: itemColor),
-                            ),
-                            title: Text(
-                              transactions[index]['name'] ?? 'Tanpa Nama',
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            subtitle: Text(
-                              formatWaktu(transactions[index]['date']),
-                              style: const TextStyle(
-                                color: Colors.white54,
-                                fontSize: 12,
-                              ),
-                            ),
-                            trailing: Text(
-                              "Rp ${transactions[index]['amount'].toString().replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => '${m[1]}.')}",
-                              style: TextStyle(
-                                color: itemColor,
-                                fontWeight: FontWeight.bold,
-                                fontSize: 16,
-                              ),
+                        if (transactions[index]['category'] == 'Makan') {
+                          itemIcon = Icons.fastfood;
+                        } else if (transactions[index]['category'] ==
+                            'Transport') {
+                          itemIcon = Icons.directions_car;
+                        } else if (transactions[index]['category'] ==
+                            'Belanja') {
+                          itemIcon = Icons.shopping_bag;
+                        } else if (transactions[index]['category'] == 'Gaji') {
+                          itemIcon = Icons.payments;
+                        } else if (transactions[index]['category'] == 'Saku') {
+                          itemIcon = Icons.account_balance_wallet;
+                        } else if (transactions[index]['category'] ==
+                            'Tabungan') {
+                          itemIcon = Icons.savings;
+                        } else if (transactions[index]['category'] ==
+                            'Lainnya') {
+                          itemIcon = Icons.receipt_long;
+                        } else {
+                          itemIcon = Icons.category;
+                        }
+                        return Dismissible(
+                          key: UniqueKey(),
+                          direction: DismissDirection.endToStart,
+                          background: Container(
+                            alignment: Alignment.centerRight,
+                            padding: const EdgeInsets.only(right: 20),
+                            color: Colors.red,
+                            child: const Icon(
+                              Icons.delete,
+                              color: Colors.white,
                             ),
                           ),
-                        ),
-                      );
-                    },
+                          onDismissed: (direction) async {
+                            int id = transactions[index]['id'];
+                            await DatabaseHelper.instance.deleteTransaction(id);
+                            _refreshTransactions();
+                          },
+                          child: Card(
+                            color: Colors.white.withOpacity(0.05),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(15),
+                            ),
+                            margin: const EdgeInsets.symmetric(vertical: 8),
+                            child: ListTile(
+                              leading: CircleAvatar(
+                                backgroundColor: itemColor.withOpacity(0.2),
+                                child: Icon(itemIcon, color: itemColor),
+                              ),
+                              title: Text(
+                                transactions[index]['name'] ?? 'Tanpa Nama',
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              subtitle: Text(
+                                formatWaktu(transactions[index]['date']),
+                                style: const TextStyle(
+                                  color: Colors.white54,
+                                  fontSize: 12,
+                                ),
+                              ),
+                              trailing: Text(
+                                "Rp ${transactions[index]['amount'].toString().replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => '${m[1]}.')}",
+                                style: TextStyle(
+                                  color: itemColor,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 16,
+                                ),
+                              ),
+                            ),
+                          ),
+                        );
+                      },
+                    ),
                   ),
-                ),
                 const SizedBox(height: 100),
               ],
             ),
@@ -694,7 +776,8 @@ class _DashboardPremiumState extends State<DashboardPremium> {
       ),
     );
   }
-   String getKategoriTerboros() {
+
+  String getKategoriTerboros() {
     Map<String, int> pengeluaranPerKategori = {};
     for (var item in transactions) {
       if (item['type'] == 'Keluar') {
@@ -705,7 +788,10 @@ class _DashboardPremiumState extends State<DashboardPremium> {
     }
     if (pengeluaranPerKategori.isEmpty) return "Belum ada pengeluaran";
     var sortedKeys = pengeluaranPerKategori.keys.toList(growable: false)
-      ..sort((k1, k2) => pengeluaranPerKategori[k2]!.compareTo(pengeluaranPerKategori[k1]!));
+      ..sort(
+        (k1, k2) =>
+            pengeluaranPerKategori[k2]!.compareTo(pengeluaranPerKategori[k1]!),
+      );
     return sortedKeys.first;
   }
 }
