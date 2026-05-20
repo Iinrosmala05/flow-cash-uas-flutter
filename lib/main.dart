@@ -38,7 +38,7 @@ class _SplashScreenState extends State<SplashScreen> {
   void initState() {
     super.initState();
 
-    Future.delayed(const Duration(seconds: 4), () async {
+    Future.delayed(const Duration(seconds: 0), () async {
       final prefs = await SharedPreferences.getInstance();
       final String? nama = prefs.getString('userNama');
       final int? saldo = prefs.getInt('totalSaldo');
@@ -67,11 +67,11 @@ class _SplashScreenState extends State<SplashScreen> {
       body: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
-          children: const [
-            Icon(
-              Icons.account_balance_wallet,
-              size: 100,
-              color: Colors.blueAccent,
+          children: [
+            Image.asset(
+              'assets/logo_flowcashApp.jpeg',
+              width: 150,
+              height: 150,
             ),
             SizedBox(height: 20),
             Text(
@@ -83,8 +83,8 @@ class _SplashScreenState extends State<SplashScreen> {
                 letterSpacing: 4,
               ),
             ),
-            SizedBox(height: 10),
-            CircularProgressIndicator(color: Colors.blueAccent),
+            const SizedBox(height: 10),
+            const CircularProgressIndicator(color: Colors.blueAccent),
           ],
         ),
       ),
